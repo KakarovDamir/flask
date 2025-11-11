@@ -14,11 +14,11 @@ jobs:
     steps:
     # Шаг 1: Checkout кода
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     # Шаг 2: Установка Python
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     
@@ -64,7 +64,7 @@ jobs:
     
     # Загрузка артефактов
     - name: Upload Security Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
