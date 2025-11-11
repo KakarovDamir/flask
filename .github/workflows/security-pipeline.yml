@@ -1,0 +1,73 @@
+name: Security Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Шаг 1: Checkout кода
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    # Шаг 2: Установка Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    # Шаг 3: Установка зависимостей Flask
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install bandit semgrep safety
+    
+    # SAST 1: Bandit
+    - name: Run Bandit (SAST)
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/ -f txt -o bandit-report.txt || true
+      continue-on-error: true
+    
+    # SAST 2: Semgrep
+    - name: Run Semgrep (SAST)
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json src/ || true
+        semgrep --config=auto --text --output=semgrep-report.txt src/ || true
+      continue-on-error: true
+    
+    # SCA: Safety
+    - name: Run Safety (SCA)
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --output safety-report.txt || true
+      continue-on-error: true
+    
+    # Вывод кратких результатов
+    - name: Display Results Summary
+      run: |
+        echo "=== BANDIT RESULTS ==="
+        cat bandit-report.txt || echo "No Bandit report"
+        echo ""
+        echo "=== SEMGREP RESULTS ==="
+        cat semgrep-report.txt || echo "No Semgrep report"
+        echo ""
+        echo "=== SAFETY RESULTS ==="
+        cat safety-report.txt || echo "No Safety report"
+    
+    # Загрузка артефактов
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          *-report.json
+          *-report.txt
